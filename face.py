@@ -118,4 +118,4 @@ if __name__ == '__main__':
 	main()
 	print ("\n\n\nExecute in: " + str(time.time()-start) + " seconds\n\n\n")
 
-# python face.py --i E:\images --o D:\Study_Document\face_detection_and_blurring\result --th 4
+# python face.py --i ./images --o ./result --th 4

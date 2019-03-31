@@ -1,0 +1,15 @@
+Install python 3 ( tested with python 3.6)
+
+Run the command:
+- pip install -r requirements.txt
+
+Run the program:
+- python face.py --i <INPUT_PATH> --o <OUTPUT_PATH> --th <NUMBER_OF_THREAD>
+
+By default, number of threads is 1
+
+See the example in the ending line of "face.py" file
+
+View help:
+- python face.py --h
+
