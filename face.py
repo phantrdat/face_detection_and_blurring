@@ -29,11 +29,9 @@ def detect_faces(cascade, test_image, scaleFactor = 1.01):
         cv2.rectangle(image_copy, (x, y), (x+w, y+h), (0, 255, 0), 2)
     return image_copy, faces_rect
 
-def blur_face(cascade, image, scaleFactor = 1.01):
-	_, faces_rect = detect_faces(cascade, image)
+def blur_face(cascade, image, faces_rect, scaleFactor = 1.01, ):
 	result_image = image.copy()
 	for (x, y, w, h) in faces_rect:
-
 		sub_face = image[y:y + h, x:x + w]
 		# apply a gaussian blur on this new recangle image
 		sub_face = cv2.GaussianBlur(sub_face,(51, 51), 75)
@@ -46,8 +44,8 @@ def detect_and_blur(img, input_path, output_path):
 	name = img[:img.rfind('.')]
 	image = cv2.imread(input_path + img)
 	# call the function to detect faces
-	faces, _ = detect_faces(haar_cascade_face, image)
-	blur_faces, faces_rect = blur_face(haar_cascade_face, image)
+	faces, faces_rect  = detect_faces(haar_cascade_face, image)
+	blur_faces, faces_rect = blur_face(haar_cascade_face, image, faces_rect)
 	# convert to RGB and display image
 	convertToRGB(faces)
 	convertToRGB(blur_faces)
@@ -64,8 +62,6 @@ def detect_and_blur(img, input_path, output_path):
 			writer.writerow(['id_' + str(idx), str(x), str(y), str(w), str(h)])
 
 def main():
-	
-
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--i', help='Input Path')
 	parser.add_argument('--o', help='Output Path')
