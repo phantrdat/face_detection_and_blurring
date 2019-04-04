@@ -53,13 +53,13 @@ def detect_and_blur(img, input_path, output_path):
 	cv2.imwrite(output_path + LOCATE_DIR + img.strip('.jpg') + '_locate.jpg', faces)
 	cv2.imwrite(output_path + BLUR_DIR + img.strip('.jpg') + '_blur.jpg', blur_faces)
 	# Saving infomation
-	with open(output_path + INFO_DIR + name + '.csv', 'w', newline='', encoding="utf-8") as csvfile:
-		fieldnames = ['id', 'left_top_x', 'left_top_y', 'width', 'height']
-		writer = csv.writer(csvfile)
-		writer.writerow(fieldnames)
-		for (idx, loc) in enumerate(faces_rect):
-			x, y, w, h = loc
-			writer.writerow(['id_' + str(idx), str(x), str(y), str(w), str(h)])
+	# with open(output_path + INFO_DIR + name + '.csv', 'w', newline='', encoding="utf-8") as csvfile:
+	# 	fieldnames = ['id', 'left_top_x', 'left_top_y', 'width', 'height']
+	# 	writer = csv.writer(csvfile)
+	# 	writer.writerow(fieldnames)
+	# 	for (idx, loc) in enumerate(faces_rect):
+	# 		x, y, w, h = loc
+	# 		writer.writerow(['id_' + str(idx), str(x), str(y), str(w), str(h)])
 
 def main():
 	parser = argparse.ArgumentParser()

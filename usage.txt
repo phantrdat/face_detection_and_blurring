@@ -13,3 +13,21 @@ See the example in the ending line of "face.py" file
 View help:
 - python face.py --h
 
+
+---------FOR VIDEO DETECTION -------
+
+Install cmake. Remember to adding path to system enviroment variables. Cmake is used to compile Dlib.
+
+Run the command:
+- pip install -r video_requirements.txt
+
+Run the program:
+- python video_face_detection_and_blur.py --i <INPUT_PATH> --o <OUTPUT_PATH> --th <NUMBER_OF_THREAD> --model <MODEL_NAME>
+
+By default, number of threads is 1
+
+View help:
+- python video_face_detection_and_blur.py --help
+
+
+
