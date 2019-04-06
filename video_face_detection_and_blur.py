@@ -104,7 +104,7 @@ def write(output_path,name,ext,fps):
         size = (width, height)
         img_array.append(img)
 
-    out = cv2.VideoWriter(output_path.replace(BLURRED_DIR, '') + "blurred_" + name + ext, cv2.VideoWriter_fourcc(*'mp4v'), fps, size)
+    out = cv2.VideoWriter(output_path.replace(BLURRED_DIR, '') + "blurred_" + name + ext, 0x00000020, fps, size)
     for i in range(len(img_array)):
         out.write(img_array[i])
     out.release()
@@ -172,16 +172,16 @@ def main():
         print ("Writing blurred frames to video")
         video = cv2.VideoCapture(input_path + name + ext)
         fps = float(video.get(cv2.CAP_PROP_FPS))
+
         write(output_path=output_path + name + "/", name=name, ext=ext, fps=fps)
+
         merge_csv(output_path, name)
 
         # remove all temp file
-        import shutil
+        # import shutil
         # shutil.rmtree(bl_dir)
-        shutil.rmtree(fr_dir)
-        shutil.rmtree(info_dir)
-        print ("Done!")
-        
+        # shutil.rmtree(fr_dir)
+        # shutil.rmtree(info_dir)
 if __name__ == "__main__":
     start = time.time()
     main()
