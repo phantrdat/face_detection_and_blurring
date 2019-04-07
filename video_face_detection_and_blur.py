@@ -104,7 +104,7 @@ def write(output_path, name, ext, fps, size):
     print (output_path.replace(BLURRED_DIR, '') + "blurred_" + name + ext.lower())
     out = cv2.VideoWriter(output_path.replace(BLURRED_DIR, '') + "blurred_" + name + ext.lower(), 0x00000020, fps, size)
     for filename in files:
-        if (os.path.isfile(output_path + BLURRED_DIR + str(filename) + ".jpg")):
+        if os.path.isfile(output_path + BLURRED_DIR + str(filename) + ".jpg"):
             img = cv2.imread(output_path + BLURRED_DIR + str(filename) + ".jpg")
             out.write(img)
             print ("images" +str(filename) + ".jpg is wrote")
