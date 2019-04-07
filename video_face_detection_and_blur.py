@@ -14,61 +14,64 @@ import cv2
 import csv
 import time
 
-BLURRED_DIR  = 'blur/'
+BLURRED_DIR = 'blur/'
 # LOCATE_DIR = 'location/'
 FRAMES_DIR = 'frames/'
 INFO_DIR = 'info/'
+
 
 # def print_result(filename, location):
 #     top, right, bottom, left = location
 #     print("{},{},{},{},{}".format(filename, top, right, bottom, left))
 
-
 def video_detect_and_blur(img, input_path, output_path, model):
-    
-    name = img[:img.rfind('.')]
-    unknown_image = face_recognition.load_image_file(input_path + img)
-    face_locations = face_recognition.face_locations(unknown_image, number_of_times_to_upsample=0, model=model)
-    image = cv2.imread(input_path + img)
-    for face_location in face_locations:
-        top, right, bottom, left = face_location
-        sub_face = image[top:bottom, left:right]
-        # apply a gaussian blur on this new recangle image
-        sub_face = cv2.GaussianBlur(sub_face, (51, 51), 75)
-        # merge this blurry rectangle to our final image
-        image[top:top + sub_face.shape[0], left:left + sub_face.shape[1]] = sub_face
-        # cv2.rectangle(image, (left, top), (right, bottom), (0, 255, 0), 2)
-    # print(output_path + BLURRED_DIR + img)
-    cv2.imwrite(output_path + BLURRED_DIR + img, image)
+    if (os.stat(input_path + img).st_size != 0):
+        name = img[:img.rfind('.')]
+        unknown_image = face_recognition.load_image_file(input_path + img)
+        face_locations = face_recognition.face_locations(unknown_image, number_of_times_to_upsample=0, model=model)
+        image = cv2.imread(input_path + img)
+        for face_location in face_locations:
+            top, right, bottom, left = face_location
+            sub_face = image[top:bottom, left:right]
+            # apply a gaussian blur on this new recangle image
+            sub_face = cv2.GaussianBlur(sub_face, (51, 51), 75)
+            # merge this blurry rectangle to our final image
+            image[top:top + sub_face.shape[0], left:left + sub_face.shape[1]] = sub_face
+            # cv2.rectangle(image, (left, top), (right, bottom), (0, 255, 0), 2)
+        # print(output_path + BLURRED_DIR + img)
+        cv2.imwrite(output_path + BLURRED_DIR + img, image)
+        with open(output_path + INFO_DIR + name + '.csv', 'w', newline='', encoding="utf-8") as csvfile:
+            fieldnames = ['location_id', 'top', 'left', 'bottom', 'right']
+            writer = csv.writer(csvfile)
+            writer.writerow(fieldnames)
+            for (idx, loc) in enumerate(face_locations):
+                top, right, bottom, left = loc
+                writer.writerow(['id_' + str(idx), str(top), str(left), str(bottom), str(right)])
 
-    with open(output_path + INFO_DIR + name + '.csv', 'w', newline='', encoding="utf-8") as csvfile:
-      fieldnames = ['location_id', 'top', 'left', 'bottom', 'right']
-      writer = csv.writer(csvfile)
-      writer.writerow(fieldnames)
-      for (idx, loc) in enumerate(face_locations):
-          top, right, bottom, left = loc
-          writer.writerow(['id_' + str(idx), str(top), str(left), str(bottom), str(right)])
+
 def merge_csv(output_path, name):
     # remove file name extension
     list_csv = sorted(os.listdir(output_path + name + "/" + INFO_DIR))
-    for i in range(0,len(list_csv)):
-        list_csv[i]  = int(list_csv[i].strip('.csv'))
+    for i in range(0, len(list_csv)):
+        list_csv[i] = int(list_csv[i].strip('.csv'))
     list_csv = sorted(list_csv)
     list_csv = [str(l) for l in list_csv]
     rows = []
     for csv_file in list_csv:
-        with open(output_path + name + "/" + INFO_DIR + csv_file  + ".csv", 'r', newline='', encoding="utf-8") as f:
+        with open(output_path + name + "/" + INFO_DIR + csv_file + ".csv", 'r', newline='', encoding="utf-8") as f:
             reader = csv.reader(f)
-            next(reader,None)
+            next(reader, None)
             for row in reader:
                 new_row = [csv_file] + row
                 rows.append(new_row)
     with open(output_path + name + "/" + name + '.csv', 'w', newline='', encoding="utf-8") as csvfile:
-      fieldnames = ['frame_id','location_id', 'top', 'left', 'bottom', 'right']
-      writer = csv.writer(csvfile)
-      writer.writerow(fieldnames)
-      for r in rows:
-        writer.writerow(r)
+        fieldnames = ['frame_id', 'location_id', 'top', 'left', 'bottom', 'right']
+        writer = csv.writer(csvfile)
+        writer.writerow(fieldnames)
+        for r in rows:
+            writer.writerow(r)
+
+
 def process_images_in_process_pool(input_path, output_path, number_of_cpus, model):
     if number_of_cpus == -1:
         processes = None
@@ -83,37 +86,41 @@ def process_images_in_process_pool(input_path, output_path, number_of_cpus, mode
     pool = context.Pool(processes=processes)
 
     images_arr = os.listdir(input_path)
-    input_path = [input_path]*len(images_arr)
-    output_path = [output_path]*len(images_arr)
+    input_path = [input_path] * len(images_arr)
+    output_path = [output_path] * len(images_arr)
     function_parameters = zip(
         images_arr, input_path, output_path,
         itertools.repeat(model),
     )
 
     pool.starmap(video_detect_and_blur, function_parameters)
-def write(output_path,name,ext,fps):
+
+
+def write(output_path, name, ext, fps, size):
     files = sorted(os.listdir(output_path + BLURRED_DIR))
     for i in range(0, len(files)):
         files[i] = int(files[i].strip('.jpg'))
     files = sorted(files)
-    img_array = []
-    size = (0,0)
+    print (output_path.replace(BLURRED_DIR, '') + "blurred_" + name + ext.lower())
+    out = cv2.VideoWriter(output_path.replace(BLURRED_DIR, '') + "blurred_" + name + ext.lower(), 0x00000020, fps, size)
     for filename in files:
-        img = cv2.imread(output_path + BLURRED_DIR + str(filename) +".jpg")
-        height, width, layers = img.shape
-        size = (width, height)
-        img_array.append(img)
-
-    out = cv2.VideoWriter(output_path.replace(BLURRED_DIR, '') + "blurred_" + name + ext, 0x00000020, fps, size)
-    for i in range(len(img_array)):
-        out.write(img_array[i])
+        if (os.path.isfile(output_path + BLURRED_DIR + str(filename) + ".jpg")):
+            img = cv2.imread(output_path + BLURRED_DIR + str(filename) + ".jpg")
+            out.write(img)
+            print ("images" +str(filename) + ".jpg is wrote")
+            # img_array.append(img)
+    # for i in range(len(img_array)):
+    #     out.write(img_array[i])
     out.release()
+
 def extract_frames(input_path, output_path, name, ext):
     video = cv2.VideoCapture(input_path + name + ext)
     frame_length = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     for i in range(0, frame_length):
         check, frame = video.read()
-        cv2.imwrite(output_path + name + "/" + FRAMES_DIR + str(i+1) + ".jpg", frame)
+        cv2.imwrite(output_path + name + "/" + FRAMES_DIR + str(i + 1) + ".jpg", frame)
+
+
 def main():
     # Multi-core processing only supported on Python 3.4 or greater
     parser = argparse.ArgumentParser()
@@ -138,12 +145,11 @@ def main():
     threads_num = int(args.th)
     model = args.model
 
-
     video_names = os.listdir(input_path)
 
     for name in video_names:
         ext = name[name.rfind('.'):]
-        name  =  name[:name.rfind('.')]
+        name = name[:name.rfind('.')]
         fr_dir = output_path + name + "/" + FRAMES_DIR
         bl_dir = output_path + name + "/" + BLURRED_DIR
         info_dir = output_path + name + "/" + INFO_DIR
@@ -156,24 +162,28 @@ def main():
         if (os.path.isdir(info_dir) == False):
             os.mkdir(info_dir, 0o755)
 
-        print ("Extracting frames from", name+ext)
-        extract_frames(input_path, output_path,name, ext) 
+        print("Extracting frames from", name + ext)
+        # extract_frames(input_path, output_path, name, ext)
 
-        if (sys.version_info < (3, 4)) and threads_num != 1:
-            click.echo("WARNING: Multi-processing support requires Python 3.4 or greater. Falling back to single-threaded processing!")
-            threads_num = 1
-        
-        print ("Blurring frames from", name+ext)
-        if os.path.isdir(fr_dir):
-            if threads_num == 1:
-                [video_detect_and_blur(image_file, fr_dir, output_path + name, model) for image_file in os.listdir(fr_dir)]
-            else:
-                process_images_in_process_pool(fr_dir , output_path + name + "/", threads_num, model)
-        print ("Writing blurred frames to video")
+        # if (sys.version_info < (3, 4)) and threads_num != 1:
+        #     click.echo(
+        #         "WARNING: Multi-processing support requires Python 3.4 or greater. Falling back to single-threaded processing!")
+        #     threads_num = 1
+        #
+        # print("Blurring frames from", name + ext)
+        # if os.path.isdir(fr_dir):
+        #     if threads_num == 1:
+        #         [video_detect_and_blur(image_file, fr_dir, output_path + name, model) for image_file in
+        #          os.listdir(fr_dir)]
+        #     else:
+        #         process_images_in_process_pool(fr_dir, output_path + name + "/", threads_num, model)
+        print("Writing blurred frames to video")
         video = cv2.VideoCapture(input_path + name + ext)
         fps = float(video.get(cv2.CAP_PROP_FPS))
+        size = (int(video.get(cv2.CAP_PROP_FRAME_WIDTH)), int(video.get(cv2.CAP_PROP_FRAME_HEIGHT)))
 
-        write(output_path=output_path + name + "/", name=name, ext=ext, fps=fps)
+
+        write(output_path=output_path + name + "/", name=name, ext=ext, fps=fps, size = size)
 
         merge_csv(output_path, name)
 
@@ -182,8 +192,9 @@ def main():
         # shutil.rmtree(bl_dir)
         # shutil.rmtree(fr_dir)
         # shutil.rmtree(info_dir)
+
+
 if __name__ == "__main__":
     start = time.time()
     main()
-    print ("\n\n\nExecute in: " + str(time.time()-start) + " seconds\n\n\n")
-
+    print("\n\n\nExecute in: " + str(time.time() - start) + " seconds\n\n\n")
