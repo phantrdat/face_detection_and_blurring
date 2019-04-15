@@ -4,6 +4,11 @@ import cv2
 import argparse
 import os
 import csv
+
+#!pip install exifread
+import exifread  
+import json
+
 BLUR_DIR  = 'blur/'
 LOCATE_DIR = 'location/'
 INFO_DIR = 'info/'
@@ -60,6 +65,42 @@ def detect_and_blur(img, input_path, output_path):
 	# 	for (idx, loc) in enumerate(faces_rect):
 	# 		x, y, w, h = loc
 	# 		writer.writerow(['id_' + str(idx), str(x), str(y), str(w), str(h)])
+	
+def get_list_jpg_file(dir_path):
+    jpg_list = []
+    if os.path.isdir(dir_path):
+        list_file = os.listdir(dir_path)
+        for file in list_file:
+            if file.lower().find('jpg')!=-1:
+                jpg_list.append(file)
+    return jpg_list
+
+def get_EXIF_info(file_path):
+    f = open(file_path, 'rb')
+    tags = exifread.process_file(f)
+    if tags.get('JPEGThumbnail'): 
+        tags.pop('JPEGThumbnail')
+
+    for key in tags.keys():
+        tags[key] = str(tags[key])
+    return tags
+
+def get_EXIF_in_folder(dir_path):
+    jpg_list = get_list_jpg_file(dir_path)
+    if len(jpg_list)==0:
+        return False
+    else:
+        folder_name = dir_path.split('/')[-2]
+        json_dict={}
+        for file in jpg_list:
+            file_path = dir_path+file
+            exif_info = get_EXIF_info(file_path)
+            json_dict[file] = exif_info
+            
+        json_dict = json.dumps(json_dict,indent=4, sort_keys=True)
+        with open('exif_{}.txt'.format(folder_name), 'w') as outfile:  
+            json.dump(json_dict, outfile)
+        return True
 
 def main():
 	parser = argparse.ArgumentParser()
@@ -108,6 +149,7 @@ def main():
 			t.start()
 		for t in jobs:
 			t.join()
+		
 if __name__ == '__main__':
 	import time
 	start = time.time()
