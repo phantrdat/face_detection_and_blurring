@@ -37,8 +37,6 @@ def video_detect_and_blur(img, input_path, output_path, model):
             sub_face = cv2.GaussianBlur(sub_face, (51, 51), 75)
             # merge this blurry rectangle to our final image
             image[top:top + sub_face.shape[0], left:left + sub_face.shape[1]] = sub_face
-            # cv2.rectangle(image, (left, top), (right, bottom), (0, 255, 0), 2)
-        # print(output_path + BLURRED_DIR + img)
         cv2.imwrite(output_path + BLURRED_DIR + img, image)
         with open(output_path + INFO_DIR + name + '.csv', 'w', newline='', encoding="utf-8") as csvfile:
             fieldnames = ['location_id', 'top', 'left', 'bottom', 'right']
@@ -101,16 +99,11 @@ def write(output_path, name, ext, fps, size):
     for i in range(0, len(files)):
         files[i] = int(files[i].strip('.jpg'))
     files = sorted(files)
-    print (output_path.replace(BLURRED_DIR, '') + "blurred_" + name + ext.lower())
     out = cv2.VideoWriter(output_path.replace(BLURRED_DIR, '') + "blurred_" + name + ext.lower(), 0x00000020, fps, size)
     for filename in files:
         if os.path.isfile(output_path + BLURRED_DIR + str(filename) + ".jpg"):
             img = cv2.imread(output_path + BLURRED_DIR + str(filename) + ".jpg")
             out.write(img)
-            print ("images" +str(filename) + ".jpg is wrote")
-            # img_array.append(img)
-    # for i in range(len(img_array)):
-    #     out.write(img_array[i])
     out.release()
 
 def extract_frames(input_path, output_path, name, ext):
@@ -163,20 +156,20 @@ def main():
             os.mkdir(info_dir, 0o755)
 
         print("Extracting frames from", name + ext)
-        # extract_frames(input_path, output_path, name, ext)
+        extract_frames(input_path, output_path, name, ext)
 
-        # if (sys.version_info < (3, 4)) and threads_num != 1:
-        #     click.echo(
-        #         "WARNING: Multi-processing support requires Python 3.4 or greater. Falling back to single-threaded processing!")
-        #     threads_num = 1
-        #
-        # print("Blurring frames from", name + ext)
-        # if os.path.isdir(fr_dir):
-        #     if threads_num == 1:
-        #         [video_detect_and_blur(image_file, fr_dir, output_path + name, model) for image_file in
-        #          os.listdir(fr_dir)]
-        #     else:
-        #         process_images_in_process_pool(fr_dir, output_path + name + "/", threads_num, model)
+        if (sys.version_info < (3, 4)) and threads_num != 1:
+            click.echo(
+                "WARNING: Multi-processing support requires Python 3.4 or greater. Falling back to single-threaded processing!")
+            threads_num = 1
+        
+        print("Blurring frames from", name + ext)
+        if os.path.isdir(fr_dir):
+            if threads_num == 1:
+                [video_detect_and_blur(image_file, fr_dir, output_path + name, model) for image_file in
+                 os.listdir(fr_dir)]
+            else:
+                process_images_in_process_pool(fr_dir, output_path + name + "/", threads_num, model)
         print("Writing blurred frames to video")
         video = cv2.VideoCapture(input_path + name + ext)
         fps = float(video.get(cv2.CAP_PROP_FPS))
