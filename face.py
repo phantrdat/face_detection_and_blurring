@@ -94,11 +94,14 @@ def get_EXIF_info(file_path):
     return tags
 
 def get_EXIF_in_folder(dir_path, out_path):
+    if dir_path[len(dir_path)-1]!='/':
+        dir_path = dir_path + "/"
     jpg_list = get_list_jpg_file(dir_path)
     if len(jpg_list)==0:
         return False
     else:
-        folder_name = dir_path.split('/')[-2]
+        folder_name = dir_path[dir_path.strip('/').rfind('/'):]
+        folder_name = folder_name.strip('/')
         json_dict={}
         for file in jpg_list:
             file_path = dir_path+file
@@ -106,7 +109,8 @@ def get_EXIF_in_folder(dir_path, out_path):
             json_dict[file] = exif_info
             
         json_dict = json.dumps(json_dict,indent=4, sort_keys=True)
-        with open('/'.join([out_path,"exif.json"]), 'w') as outfile:
+        json_name  = 'exif_{}.json'.format(folder_name)
+        with open('/'.join([out_path,json_name]), 'w') as outfile:
             json.dump(json_dict, outfile)
         return True
 
@@ -162,6 +166,5 @@ if __name__ == '__main__':
     start = time.time()
     main()
     print ("\n\n\nExecute in: " + str(time.time()-start) + " seconds\n\n\n")
-    # print(get_EXIF_info("D:\\Study_Document\\face_detection_and_blurring\\video-face-detection\\result\\blur\\young people employment standard_blur.jpg"))
 
 # python face.py --i ./images --o ./result --th 4
