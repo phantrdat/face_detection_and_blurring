@@ -9,6 +9,7 @@ import json
 from io import BytesIO
 import piexif
 from PIL import Image
+import yolo_opencv as YOLO_detector
 BLUR_DIR  = 'blur/'
 LOCATE_DIR = 'location/'
 INFO_DIR = 'info/'
@@ -17,29 +18,33 @@ INFO_DIR = 'info/'
 def convertToRGB(image):
     return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-haar_cascade_face = cv2.CascadeClassifier('haarcascade_frontalface_alt2.xml')
+# haar_cascade_face = cv2.CascadeClassifier('haarcascade_frontalface_alt2.xml')
 
-def detect_faces(cascade, test_image, scaleFactor = 1.01):
+def detect_faces(test_image, scaleFactor = 0.00392):
     # create a copy of the image to prevent any changes to the original one.
     image_copy = test_image.copy()
 
     #convert the test image to gray scale as opencv face detector expects gray images
-    gray_image = cv2.cvtColor(image_copy, cv2.COLOR_BGR2GRAY)
+    # gray_image = cv2.cvtColor(image_copy, cv2.COLOR_BGR2GRAY)
     
     # Applying the haar classifier to detect faces
-    faces_rect = cascade.detectMultiScale(gray_image, scaleFactor=scaleFactor, minNeighbors = 5)
+    faces_rect = YOLO_detector.detectMultiScale(image_copy, scaleFactor)
     # print('Faces found: ', len(faces_rect))
 
     for (x, y, w, h) in faces_rect:
         cv2.rectangle(image_copy, (x, y), (x+w, y+h), (0, 255, 0), 2)
     return image_copy, faces_rect
 
-def blur_face(cascade, image, faces_rect, scaleFactor = 1.01, ):
+def blur_face(image, faces_rect):
     result_image = image.copy()
     for (x, y, w, h) in faces_rect:
+        if (x<0):
+            x=0
+        if (y<0):
+            y=0
         sub_face = image[y:y + h, x:x + w]
         # apply a gaussian blur on this new recangle image
-        sub_face = cv2.GaussianBlur(sub_face,(51, 51), 75)
+        sub_face = cv2.GaussianBlur(sub_face,(81, 81), 101)
         # merge this blurry rectangle to our final image
         result_image[y:y+sub_face.shape[0], x:x+sub_face.shape[1]] = sub_face
     return result_image, faces_rect
@@ -50,8 +55,8 @@ def detect_and_blur(img, input_path, output_path):
     name = img[:img.rfind('.')]
     image = cv2.imread(input_path + img)
     # call the function to detect faces
-    faces, faces_rect  = detect_faces(haar_cascade_face, image)
-    blur_faces, faces_rect = blur_face(haar_cascade_face, image, faces_rect)
+    faces, faces_rect  = detect_faces(image)
+    blur_faces, faces_rect = blur_face(image, faces_rect)
     # convert to RGB and display image
     convertToRGB(faces)
     convertToRGB(blur_faces)
@@ -94,14 +99,19 @@ def get_EXIF_info(file_path):
     return tags
 
 def get_EXIF_in_folder(dir_path, out_path):
-    if dir_path[len(dir_path)-1]!='/':
-        dir_path = dir_path + "/"
+    # if dir_path[len(dir_path)-1]!='/':
+    #     dir_path = dir_path + "/"
     jpg_list = get_list_jpg_file(dir_path)
     if len(jpg_list)==0:
         return False
     else:
-        folder_name = dir_path[dir_path.strip('/').rfind('/'):]
-        folder_name = folder_name.strip('/')
+        path = dir_path.strip('/')
+        if path.find('/')==-1:
+            folder_name = path
+        if path.count('/')==1:
+            folder_name = path[path.rfind('/'):]
+        if path.count('/')>1:
+            folder_name = path[path.strip('/').rfind('/'):]
         json_dict={}
         for file in jpg_list:
             file_path = dir_path+file
