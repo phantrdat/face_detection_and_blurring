@@ -31,3 +31,14 @@ View help:
 
 
 
+----------FOR GETTING EXIF INFORMATION---------
+Location of function: face.py
+Install the package: pip install exifread
+Using: def get_EXIF_in_folder(dir_path)
+
+Input : dir_path is a string of directory path which have '/' in the end of the string:
+For example: 'Donwload/Photos/'
+
+Output: a text file have JSON object have name exif_{...}.txt
+
+For example: exit_Photos.txt
