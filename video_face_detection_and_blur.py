@@ -6,14 +6,13 @@ import argparse
 import click
 import os
 import re
-import face_recognition.api as face_recognition
 import multiprocessing
 import sys
 import itertools
 import cv2
 import csv
 import time
-
+import yolo_opencv as YOLO_detector
 
 BLURRED_DIR = 'blur/'
 # LOCATE_DIR = 'location/'
@@ -25,8 +24,7 @@ EXIF = 'exif/'
 #     top, right, bottom, left = location
 #     print("{},{},{},{},{}".format(filename, top, right, bottom, left))
 
-def video_detect_and_blur(img, input_path, output_path, model):
-    import yolo_opencv as YOLO_detector
+def video_detect_and_blur(img, input_path, output_path):
     if  os.stat(input_path + img).st_size != 0 and os.path.isfile(output_path + BLURRED_DIR + img)==False:
         name = img[:img.rfind('.')]
         unknown_image = cv2.imread(input_path + img)
@@ -72,7 +70,7 @@ def merge_csv(output_path, name):
             writer.writerow(r)
 
 
-def process_images_in_process_pool(input_path, output_path, number_of_cpus, model):
+def process_images_in_process_pool(input_path, output_path, number_of_cpus):
     if number_of_cpus == -1:
         processes = None
     else:
@@ -90,7 +88,6 @@ def process_images_in_process_pool(input_path, output_path, number_of_cpus, mode
     output_path = [output_path] * len(images_arr)
     function_parameters = zip(
         images_arr, input_path, output_path,
-        itertools.repeat(model),
     )
 
     pool.starmap(video_detect_and_blur, function_parameters)
@@ -131,7 +128,6 @@ def main():
     parser.add_argument('--i', help='Video input path')
     parser.add_argument('--o', help='Output Path')
     parser.add_argument('--th', default=1, help='Number of Threads')
-    parser.add_argument('--model', default="hog", help='Which face detection model to use. Options are "hog" or "cnn".')
     args = parser.parse_args()
 
     # parse --i flag to get input path
@@ -147,7 +143,6 @@ def main():
     # parse --o flag to get output path
 
     threads_num = int(args.th)
-    model = args.model
 
     video_names = os.listdir(input_path)
 
@@ -183,7 +178,7 @@ def main():
         if 'Orientation' in exif_dict:
             angle = int(exif_dict['Orientation'])
 
-        print("Extracting frames from", name + ext)
+        print("\nExtracting frames from", name + ext +"\n")
         extract_frames(input_path, output_path, name, ext, angle)
         if (sys.version_info < (3, 4)) and threads_num != 1:
             click.echo(
@@ -193,10 +188,10 @@ def main():
         print("Blurring frames from", name + ext)
         if os.path.isdir(fr_dir):
             if threads_num == 1:
-                [video_detect_and_blur(image_file, fr_dir, output_path + name, model) for image_file in
+                [video_detect_and_blur(image_file, fr_dir, output_path + name) for image_file in
                  os.listdir(fr_dir)]
             else:
-                process_images_in_process_pool(fr_dir, output_path + name + "/", threads_num, model)
+                process_images_in_process_pool(fr_dir, output_path + name + "/", threads_num)
         print("Writing blurred frames to video")
         video = cv2.VideoCapture(input_path + name + ext)
         fps = float(video.get(cv2.CAP_PROP_FPS))
