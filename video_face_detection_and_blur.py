@@ -14,29 +14,31 @@ import cv2
 import csv
 import time
 
+
 BLURRED_DIR = 'blur/'
 # LOCATE_DIR = 'location/'
 FRAMES_DIR = 'frames/'
 INFO_DIR = 'info/'
-
+EXIF = 'exif/'
 
 # def print_result(filename, location):
 #     top, right, bottom, left = location
 #     print("{},{},{},{},{}".format(filename, top, right, bottom, left))
 
 def video_detect_and_blur(img, input_path, output_path, model):
-    if (os.stat(input_path + img).st_size != 0):
+    import yolo_opencv as YOLO_detector
+    if  os.stat(input_path + img).st_size != 0 and os.path.isfile(output_path + BLURRED_DIR + img)==False:
         name = img[:img.rfind('.')]
-        unknown_image = face_recognition.load_image_file(input_path + img)
-        face_locations = face_recognition.face_locations(unknown_image, number_of_times_to_upsample=0, model=model)
+        unknown_image = cv2.imread(input_path + img)
+        face_locations = YOLO_detector.detectMultiScale(unknown_image, 0.00392)
         image = cv2.imread(input_path + img)
         for face_location in face_locations:
-            top, right, bottom, left = face_location
-            sub_face = image[top:bottom, left:right]
+            x, y, w, h = face_location
+            sub_face = image[y:y + h, x:x + w]
             # apply a gaussian blur on this new recangle image
-            sub_face = cv2.GaussianBlur(sub_face, (51, 51), 75)
+            sub_face = cv2.GaussianBlur(sub_face, (81, 81), 75)
             # merge this blurry rectangle to our final image
-            image[top:top + sub_face.shape[0], left:left + sub_face.shape[1]] = sub_face
+            image[y:y+sub_face.shape[0], x:x+sub_face.shape[1]] = sub_face
         cv2.imwrite(output_path + BLURRED_DIR + img, image)
         with open(output_path + INFO_DIR + name + '.csv', 'w', newline='', encoding="utf-8") as csvfile:
             fieldnames = ['location_id', 'top', 'left', 'bottom', 'right']
@@ -99,21 +101,30 @@ def write(output_path, name, ext, fps, size):
     for i in range(0, len(files)):
         files[i] = int(files[i].strip('.jpg'))
     files = sorted(files)
-    out = cv2.VideoWriter(output_path.replace(BLURRED_DIR, '') + "blurred_" + name + ext.lower(), 0x00000020, fps, size)
+    out = cv2.VideoWriter(output_path.replace(BLURRED_DIR, '') + "blurred_" + name + ext.lower(), cv2.VideoWriter_fourcc(*'XVID'), fps, size)
     for filename in files:
         if os.path.isfile(output_path + BLURRED_DIR + str(filename) + ".jpg"):
             img = cv2.imread(output_path + BLURRED_DIR + str(filename) + ".jpg")
             out.write(img)
     out.release()
-
-def extract_frames(input_path, output_path, name, ext):
+def rotate_image(frame, angle):
+    # get image height, width
+    (h, w) = frame.shape[:2]
+    # calculate the center of the image
+    center = (w / 2, h / 2)
+    scale = 1
+    M = cv2.getRotationMatrix2D(center, angle, scale)
+    rotated_image = cv2.warpAffine(frame, M, (w, h))
+    return rotated_image
+def extract_frames(input_path, output_path, name, ext, angle):
     video = cv2.VideoCapture(input_path + name + ext)
     frame_length = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     for i in range(0, frame_length):
-        check, frame = video.read()
-        cv2.imwrite(output_path + name + "/" + FRAMES_DIR + str(i + 1) + ".jpg", frame)
-
-
+        if  os.path.isfile(output_path + name + "/" + FRAMES_DIR + str(i + 1) + ".jpg")==False:
+            check, frame = video.read()
+            if angle == 180 and frame is not None:
+                frame = rotate_image(frame,angle)
+            cv2.imwrite(output_path + name + "/" + FRAMES_DIR + str(i + 1) + ".jpg", frame)
 def main():
     # Multi-core processing only supported on Python 3.4 or greater
     parser = argparse.ArgumentParser()
@@ -146,6 +157,7 @@ def main():
         fr_dir = output_path + name + "/" + FRAMES_DIR
         bl_dir = output_path + name + "/" + BLURRED_DIR
         info_dir = output_path + name + "/" + INFO_DIR
+        exif_dir = output_path + name + "/" + EXIF
         if (os.path.isdir(output_path + name) == False):
             os.mkdir(output_path + name, 0o755)
         if (os.path.isdir(bl_dir) == False):
@@ -154,15 +166,30 @@ def main():
             os.mkdir(fr_dir, 0o755)
         if (os.path.isdir(info_dir) == False):
             os.mkdir(info_dir, 0o755)
+        if (os.path.isdir(exif_dir) == False):
+            os.mkdir(exif_dir, 0o755)
+        # Call exiftool to get orientation of video
+        command = "exiftool.exe "+ input_path+ "/"+ name + ext + ">" + exif_dir + name + ".txt"
+        os.popen(command).read()
+        exif_dict = {}
+        for line in open(exif_dir + name + ".txt", 'r').readlines():
+            pos = line.find(":")
+            exif_dict[line[:pos].strip(" ")] = line[pos+1:].strip("\n").strip(" ")
+
+        # Check video orientation
+        angle = 0
+        if 'Rotation' in exif_dict:
+            angle = int(exif_dict['Rotation'])
+        if 'Orientation' in exif_dict:
+            angle = int(exif_dict['Orientation'])
 
         print("Extracting frames from", name + ext)
-        extract_frames(input_path, output_path, name, ext)
-
+        extract_frames(input_path, output_path, name, ext, angle)
         if (sys.version_info < (3, 4)) and threads_num != 1:
             click.echo(
                 "WARNING: Multi-processing support requires Python 3.4 or greater. Falling back to single-threaded processing!")
             threads_num = 1
-        
+
         print("Blurring frames from", name + ext)
         if os.path.isdir(fr_dir):
             if threads_num == 1:

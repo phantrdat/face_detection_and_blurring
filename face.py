@@ -136,6 +136,7 @@ def main():
     if (input_path[len(input_path)-1] != '/'):
         input_path = input_path + "/"
 
+
     # parse --o flag to get output path
     output_path = args.o
     if output_path[len(output_path)-1] != '/':
@@ -172,9 +173,9 @@ def main():
             t.join()
 
 if __name__ == '__main__':
-    import time
-    start = time.time()
-    main()
-    print ("\n\n\nExecute in: " + str(time.time()-start) + " seconds\n\n\n")
-
-# python face.py --i ./images --o ./result --th 4
+    # import time
+    # start = time.time()
+    # main()
+    # print ("\n\n\nExecute in: " + str(time.time()-start) + " seconds\n\n\n")
+    print(get_EXIF_info("E:\\New1\\GH040002\\frames\\9.1.jpg"))
+    # python face.py --i ./images --o ./result --th 4
